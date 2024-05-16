@@ -1,0 +1,43 @@
+name: Dev
+on:
+  push:
+    branches:
+      - dev
+jobs:
+  Send_Slack:
+    name: Send To Slack
+    runs-on: ubuntu-latest
+    steps:
+      - id: slack
+        name: Send to Slack
+        uses: slackapi/slack-github-action@v1.21.0
+        with:
+          channel-id: 'C04DKA10V24'
+          payload: |
+            {
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "This is from testing environment",
+                        "emoji": true
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "plain_text",
+                        "text": " Commit Message is : ${{ github.event.head_commit.message }}                        ",
+                        "emoji": true
+                    }
+                },
+                {
+                    "type": "image",
+                    "image_url": "https://d3eeke16mv0lt7.cloudfront.net/sites/default/files/styles/article_hero_image/public/field/image/testing-trends-world-quality-report.jpg?itok=vUyONZsj",
+                    "alt_text": "inspiration"
+                }
+            ]
+             }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN}}

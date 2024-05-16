@@ -1,0 +1,69 @@
+name: Build and publish manually
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Image version'
+        required: true
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repo # (callout-1)
+        uses: actions/checkout@v2
+      - name: Build image # (callout-2)
+        run: docker build -t sample/my-page .
+      - name: Install doctl # (callout-3)
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Log in to DO Container Registry # (callout-4)
+        run: doctl registry login --expiry-seconds 60000
+      - name: Log in to Kubernetes # (callout-4)
+        run: doctl kubernetes cluster kubeconfig save e9370807-c0d5-4c66-9087-23f388e8bc5d
+      - name: testing kubectl
+        run: kubectl get all
+      - name: Tag image # (callout-5)
+        run: docker tag sample/my-page registry.digitalocean.com/kubernetes-github-actions/my-sample-page:${{github.event.inputs.version }}
+      - name: Push image to DO Container Registry # (callout-6)
+        run: docker push registry.digitalocean.com/kubernetes-github-actions/my-sample-page:${{github.event.inputs.version }}
+      - name: apply the new image
+        run: kubectl set image deployment/remah-world-deployment nginx-hello=registry.digitalocean.com/kubernetes-github-actions/my-sample-page:${{github.event.inputs.version }}
+  Send_Slack:
+    name: Send To Slack
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    steps:
+      - id: slack
+        name: Send to Slack
+        uses: slackapi/slack-github-action@v1.21.0
+        with:
+          channel-id: 'C04DKA10V24'
+          payload: |
+            {
+             "blocks": [
+               {
+                 "type": "section",
+                 "text": {
+                   "type": "plain_text",
+                   "text": "A new Release has just Deployed ::rocket::rocket::rocket::rocket::rocket::rocket:",
+                   "emoji": true
+                 }
+               },
+               {
+                 "type": "section",
+                 "text": {
+                   "type": "plain_text",
+                   "text": "Our Domain is : https://abdalah.remah.world",
+                   "emoji": true
+                 }
+               },
+               {
+                 "type": "image",
+                 "image_url": "https://www.pngall.com/wp-content/uploads/2016/04/Hosting-PNG-Images.png",
+                 "alt_text": "inspiration"
+               }
+             ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN}}
